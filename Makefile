@@ -7,8 +7,8 @@ LD       = lld-link
 # https://github.com/Jake-Shadle/xwin
 XWIN_ROOT       = ./xwinSDK
 
-# https://github.com/TsudaKageyu/minhook
-MINHOOK_DIR     = ./MinHook_134
+# https://github.com/m417z/minhook (multihook branch) -- git submodule
+MINHOOK_DIR     = ./minhook
 
 # Modern Windows SDK no longer has D3DX9 headers
 # Grab them from elder Windows SDK or DirectX 9 SDK
