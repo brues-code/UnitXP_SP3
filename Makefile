@@ -85,8 +85,12 @@ $(TARGET): $(OBJS)
 %.obj: %.cpp
 	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) /c $< /Fo:$@
 
+# MinHook's multihook sources use NTSTATUS/NTAPI and offsetof but only include
+# <windows.h>, relying on it to pull those in transitively (true under MSVC, not
+# under clang-cl + the xwin SDK). Force-include the headers that define them,
+# windows.h first so winternl.h sees the base types it needs.
 %.obj: %.c
-	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) /c $< /Fo:$@
+	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) /FIwindows.h /FIwinternl.h /FIstddef.h /c $< /Fo:$@
 
 clean:
 	rm -f $(OBJS) *.dll *.lib *.exp *.pdb
