@@ -22,12 +22,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install LLVM toolchain and make
+        env:
+          # The MSVC STL that xwin fetches requires Clang 19+, newer than the
+          # clang Ubuntu ships by default -- install it from apt.llvm.org.
+          LLVM_VERSION: '19'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang lld make curl jq zip
-          # Ubuntu ships clang-cl / lld-link inside the LLVM bin dir but not as
-          # unversioned /usr/bin symlinks -- expose them so the Makefile finds them.
-          LLVM_BIN=$(dirname "$(readlink -f "$(command -v clang)")")
+          curl -fsSL https://apt.llvm.org/llvm.sh | sudo bash -s -- "$LLVM_VERSION"
+          sudo apt-get install -y --no-install-recommends "lld-$LLVM_VERSION" make curl jq zip
+          # clang-cl / lld-link live in the versioned LLVM bin dir; expose them
+          # unversioned so the Makefile finds them.
+          LLVM_BIN="/usr/lib/llvm-$LLVM_VERSION/bin"
           sudo ln -sf "$LLVM_BIN/clang-cl" /usr/local/bin/clang-cl
           sudo ln -sf "$LLVM_BIN/lld-link" /usr/local/bin/lld-link
           clang-cl --version
