@@ -25,6 +25,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends clang lld make curl jq zip
+          # Ubuntu ships clang-cl / lld-link inside the LLVM bin dir but not as
+          # unversioned /usr/bin symlinks -- expose them so the Makefile finds them.
+          LLVM_BIN=$(dirname "$(readlink -f "$(command -v clang)")")
+          sudo ln -sf "$LLVM_BIN/clang-cl" /usr/local/bin/clang-cl
+          sudo ln -sf "$LLVM_BIN/lld-link" /usr/local/bin/lld-link
           clang-cl --version
           lld-link --version
 
