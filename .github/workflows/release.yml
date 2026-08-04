@@ -30,7 +30,7 @@ jobs:
           LLVM_VERSION: '19'
         run: |
           curl -fsSL https://apt.llvm.org/llvm.sh | sudo bash -s -- "$LLVM_VERSION"
-          sudo apt-get install -y --no-install-recommends "lld-$LLVM_VERSION" make curl jq zip
+          sudo apt-get install -y --no-install-recommends "lld-$LLVM_VERSION" make curl jq zip upx-ucl
           # clang-cl / lld-link live in the versioned LLVM bin dir; expose them
           # unversioned so the Makefile finds them.
           LLVM_BIN="/usr/lib/llvm-$LLVM_VERSION/bin"
@@ -65,6 +65,13 @@ jobs:
         # The mingw D3DX9 headers reference WINBOOL (a mingw alias for int) that
         # the MSVC SDK lacks; bridge it. Harmless for the real DirectX SDK headers.
         run: make EXTRA_CXXFLAGS=/DWINBOOL=BOOL
+
+      - name: Compress DLL with UPX
+        # Match the upstream release size (~200 KB vs ~490 KB uncompressed). UPX
+        # unpacks in memory at load, so the mapped image still matches the PDB.
+        run: |
+          upx --best --lzma UnitXP_SP3.dll
+          ls -l UnitXP_SP3.dll
 
       - name: Package bundle
         id: package
