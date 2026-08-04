@@ -60,7 +60,9 @@ jobs:
           xwin --accept-license --arch x86 splat --output xwinSDK
 
       - name: Build
-        run: make
+        # The mingw D3DX9 headers reference WINBOOL (a mingw alias for int) that
+        # the MSVC SDK lacks; bridge it. Harmless for the real DirectX SDK headers.
+        run: make EXTRA_CXXFLAGS=/DWINBOOL=BOOL
 
       - name: Package bundle
         id: package

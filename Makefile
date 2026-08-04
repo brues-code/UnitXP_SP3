@@ -83,10 +83,10 @@ $(TARGET): $(OBJS)
 	$(LD) $(LDFLAGS) /OUT:$@ $(OBJS) $(LIBS)
 
 %.obj: %.cpp
-	$(CXX) $(CXXFLAGS) /c $< /Fo:$@
+	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) /c $< /Fo:$@
 
 %.obj: %.c
-	$(CXX) $(CXXFLAGS) /c $< /Fo:$@
+	$(CXX) $(CXXFLAGS) $(EXTRA_CXXFLAGS) /c $< /Fo:$@
 
 clean:
 	rm -f $(OBJS) *.dll *.lib *.exp *.pdb
