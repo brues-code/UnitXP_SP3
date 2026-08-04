@@ -1,0 +1,88 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # Bump this to invalidate the cached xwin SDK splat.
+      XWIN_CACHE_KEY: v1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LLVM toolchain and make
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld make curl jq zip
+          clang-cl --version
+          lld-link --version
+
+      - name: Fetch D3DX9 headers
+        # Clean-room LGPL-2.1 headers (d3dx9*.h). The Makefile lists this dir
+        # last on the include path, so the xwin SDK's own d3d9.h still wins.
+        run: git clone --depth 1 https://github.com/misyltoad/mingw-directx-headers d3d9x_headers
+
+      - name: Cache xwin SDK
+        id: xwin-cache
+        uses: actions/cache@v4
+        with:
+          path: xwinSDK
+          key: xwin-sdk-${{ env.XWIN_CACHE_KEY }}-${{ runner.os }}
+
+      - name: Splat MSVC CRT + Windows SDK (x86)
+        if: steps.xwin-cache.outputs.cache-hit != 'true'
+        run: |
+          url=$(curl -fsSL https://api.github.com/repos/Jake-Shadle/xwin/releases/latest \
+            | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-musl.tar.gz$")) | .browser_download_url' \
+            | head -n1)
+          echo "Downloading xwin from $url"
+          curl -fsSL "$url" | tar -xz --strip-components=1 -C /usr/local/bin --wildcards '*/xwin'
+          xwin --accept-license --arch x86 splat --output xwinSDK
+
+      - name: Build
+        run: make
+
+      - name: Package bundle
+        id: package
+        run: |
+          NAME="UnitXP_SP3-${{ github.ref_name }}"
+          mkdir "$NAME"
+          cp UnitXP_SP3.dll "$NAME"/
+          # Bundle the companion in-game addon so the release ships the .dll and
+          # its settings UI together. The addon vendors its own libs, so a plain
+          # checkout is the full package -- strip repo/packaging metadata only.
+          git clone --depth 1 https://github.com/brues-code/UnitXP_SP3_Addon "$NAME/UnitXP_SP3_Addon"
+          rm -rf "$NAME/UnitXP_SP3_Addon/.git" "$NAME/UnitXP_SP3_Addon/.github" "$NAME/UnitXP_SP3_Addon/README.md"
+          zip -r "$NAME.zip" "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitXP_SP3
+          path: |
+            ${{ steps.package.outputs.name }}.zip
+            UnitXP_SP3.pdb
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.package.outputs.name }}.zip
+            ${{ steps.package.outputs.name }}/UnitXP_SP3.dll
+            UnitXP_SP3.pdb
