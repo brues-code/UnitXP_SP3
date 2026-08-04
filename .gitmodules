@@ -1,0 +1,4 @@
+[submodule "minhook"]
+	path = minhook
+	url = https://github.com/m417z/minhook.git
+	branch = multihook
